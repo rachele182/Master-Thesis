@@ -11,7 +11,7 @@ The control is designed to be consistent with the geometry of the Cooperative ta
 The overall scheme consists of a stiffness adapter, cooperative admittance controller, and wrench adapter complete with an inner motion controller along with the cooperative system.  
 The project contains two main repos: 
 
-- **cdac_simulation** : here you can find the simulation setup and first results obtained in Matlab;
+- **cdac** : here you can find the simulation setup and first results obtained in Matlab;
 
 - **dual_admittance_control_ros**: here you can find the c++ code,ros nodes and results obtained from the experiments made on a bimanual system composed of two 7-dof robots. 
 
