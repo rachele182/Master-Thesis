@@ -13,7 +13,7 @@ The project contains two main repos:
 
 - **cdac** : here you can find the simulation setup and first results obtained in Matlab;
 
-- **dual_admittance_control_ros**: here you can find the c++ code,ros nodes and results obtained from the experiments made on a bimanual system composed of two 7-dof robots. 
+- **dual_admittance_control_ros**: here you can find readme.md files to guide trough the remaining folders containing the c++ code,ros nodes and results obtained from the experiments made on a bimanual system composed of two 7-dof robots. 
 
 _Simulation:_ 
 The CDAC is tested on a grasping task for two 7dof Panda robots by using CoppeliaSim via remApi functions in Matlab. Instructions to run the simulation and visualize the results are in readme.txt inside the repository.
