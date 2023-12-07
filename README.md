@@ -29,7 +29,7 @@ Instructions to run the simulation and visualize the results are in readme.txt i
 <img src="https://github.com/rachele182/Master-Thesis/assets/75611841/5abf2cea-e787-473a-aa5a-d291a6fd6349" width="255">
 
 _Experiments._
-The proposed framework presented in \ref{subsec:CDAC_design} was validated trough some cooperative tasks experiments on a real dual-arm system composed of two 7Dof Franka Emika Panda robots.  
+The proposed framework presented was validated trough some cooperative tasks experiments on a real dual-arm system composed of two 7Dof Franka Emika Panda robots.  
 The experiments were carried out at *Munich Istitute of Robotics* using **libfranka** and **Franka Control Interface** system to communicate with the robots. An external router device was used to connect the manipulators to the same network and allow the combined control of the two arms simultaneously. All the blocks componing the controller were implemented as nodes using Robot Operating System (ROS).  
 An overview of the experiment setups is shown in the figure.  
 To prove the effectiveness of **CDAC** we performed a cooperative lifting task of a box performed in three different ways.   
