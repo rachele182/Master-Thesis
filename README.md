@@ -10,6 +10,7 @@ The thesis focuses on the design of a new controller admittance controller for b
 The control is designed to be consistent with the geometry of the Cooperative task space using the dual quaternion logarithmic mapping of wrenches and corresponding elastic displacements.  
 The overall scheme consists of a stiffness adapter, cooperative admittance controller, and wrench adapter complete with an inner motion controller along with the cooperative system. 
 Please have a look below for the schematic represantion of the proposed control system. 
+![Alt text](drawing_blocl.pdf)
 
 The project contains two main repos: 
 
