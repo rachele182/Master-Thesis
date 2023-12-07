@@ -4,7 +4,7 @@ function [Wa,Wr] = wrench_mapping(wr_1,wr_2,x1,x2,xa)
 %% Description: Linear mapping from the external wrenches perceived at the two EEs to the absolute and relative task-space
 
 %%Outputs:  Wa,Wr = cdts absolute and relative wrenches; (world frame) 6x1
-%%Inputs:   wr_1,wr_2 = mesured external wrench at the tip of each EE (world-frame);
+%%Inputs:   wr_1,wr_2 = measured external wrench at the tip of each EE (world-frame);
 %           x1, x2 = EEs poses;
 %           xa = absolute pose 
 

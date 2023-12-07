@@ -1,3 +1,20 @@
+// ---------------------------- IMPEDANCE CONTROL USING DQ LOGARITHM ------------------ //
+
+//    begin                : May 2023
+//    authors              : Rachele Nebbia Colomba
+//    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+//    email                : rachelenebbia <at> gmail <dot> com
+ 
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License see <http://www.gnu.org/licenses/>.
+//  **************************************************************************
+// Purpose: External Impedance Controller Loop for single 7dof manipulator
+// Description: This represent the outer impedance controller for a bimanual system, that modifies the given desired trajectory into a compliant one based on estimation of
+//              the external forces and varianble impedance  to guarantee safe interaction.
+// Input: desired pose in terms of EE position and orientation
+// Output: compliant pose to be tracked from an inner motion controller. 
+
+
 #include "panda_controllers/impedance_loop.h"
 #include <geometry_msgs/PoseStamped.h>
 
@@ -19,12 +36,14 @@ using DQ_robotics::C8;
 
 // --------------------------DEFINE FUNCTIONS---------------------------------------------------//
 
+// Filter for external forces 
 double impedance_loop::Filter(double y, double y_last){  
   double gain; 
   gain = 0.1; 
   return gain * y + (1 - gain) * y_last;
 }
 
+// Function to map external force consistent with the logarithmic space 
 Vector6d impedance_loop::wrench_mapping(Vector6d wrench_ext,DQ_robotics::DQ x_hat){
        Vector6d flog;  
        MatrixXd G = x_hat.generalized_jacobian();
@@ -37,11 +56,12 @@ Vector6d impedance_loop::wrench_mapping(Vector6d wrench_ext,DQ_robotics::DQ x_ha
     return flog;
     }
 
-// DEAD ZONE FOR EXTERNAL FORCES // 
+// DEAD ZONE FOR EXTERNAL FORCES and Torques// 
+// Needed in case of external low disturbances //
 
 Vector6d impedance_loop::dead_zone(Vector6d wrench_ext, double dz_value,double dz_value_torques){
    Vector6d wrench_n; 
-   double UL; double LL; UL = dz_value; LL = -dz_value; //upper and lower limit for ext forces
+   double UL; double LL; UL = dz_value; LL = -dz_value;                           //upper and lower limit for ext forces
    double UL_M;  double LL_M; UL_M = dz_value_torques; LL_M = -dz_value_torques; //upper and lower limit for ext moments
 
 for (int i = 0; i < 3; i++) {
@@ -66,18 +86,18 @@ for (int i = 3; i < 6; i++) {
   }
 return wrench_n;
 }
-   
+
+// Compute admittance
 void impedance_loop::admittance_eq(Vector6d flog,Vector6d y_hat,Vector6d dy_hat,
         MatrixXd Kd,MatrixXd Bd,MatrixXd Md,double time_prec, double t){
             adm_eq.ddy_hat = Md.inverse()*(-Bd*dy_hat-Kd*y_hat-flog);            
             double cdt; 
             cdt = 0.005;
-            // cdt = t-time_prec;
             adm_eq.dy_hat  = adm_eq.ddy_hat*cdt + adm_eq.dy_hat;
             adm_eq.y_hat = adm_eq.dy_hat*cdt + adm_eq.y_hat;
          
         }
-
+//  Compute pose displacement 
 void impedance_loop::compute_pose_disp(Vector6d y_hat,Vector6d dy_hat,Vector6d ddy_hat){
         DQ y_hat_dq, x_hat_dq, dx_hat_dq; 
         y_hat_dq = DQ(y_hat); 
@@ -90,7 +110,7 @@ void impedance_loop::compute_pose_disp(Vector6d y_hat,Vector6d dy_hat,Vector6d d
         disp.ddx_hat = Q8*ddy_hat + Q8_dot*dy_hat;
 
 }
-
+// Compute trajectory
 void impedance_loop::compute_traj(Vector8d x_d,Vector8d dx_d,Vector8d ddx_d,
         Vector8d x_hat,Vector8d dx_hat,Vector8d ddx_hat){
         DQ x_hat_dq, dx_hat_dq,ddx_hat_dq;
@@ -139,7 +159,7 @@ bool impedance_loop::init(ros::NodeHandle& node_handle){
     time_prec = ros::Time::now().toSec();     // previous cyle time 
     t = ros::Time::now().toSec();             // current ros time
     wrench_ext.setZero();                     // external wrench on EE
-    wrench_n.setZero(); 
+    wrench_n.setZero();  
     wrench_f.setZero();  
     fx = 0; fy = 0; fz = 0; 
     fx_prec = 0; fy_prec = 0; fz_prec = 0; 
@@ -150,7 +170,7 @@ bool impedance_loop::init(ros::NodeHandle& node_handle){
     or_in_ << 1,0,0,0;                        // initial EE orientation
     I8 = MatrixXd::Identity(8, 8);
 	  I6 = MatrixXd::Identity(6, 6);
-    adm_eq.y_hat.setZero();                   // log mapping of displacement
+    adm_eq.y_hat.setZero();                   // log mapping of displacement 6x1
     adm_eq.dy_hat.setZero();
     adm_eq.ddy_hat.setZero();
     disp.x_hat << 1,0,0,0,0,0,0,0;             // pose displacement 8x1
@@ -198,7 +218,7 @@ void impedance_loop::update(){
 	 BD(3,3)= D_DEFAULT; BD(4,4)= D_DEFAULT; BD(5,5)= D_DEFAULT;
    MD =I6*MASS;
   
-  //Dead zone for estimated external force
+  // Dead zone for estimated external force (if needed just unccoment line 222 and comment line 223)
   // wrench_n = dead_zone(wrench_ext,DZ_VALUE_F,DZ_VALUE_M);
   wrench_n = wrench_ext; 
 
@@ -306,16 +326,18 @@ void impedance_loop::f_ext_Callback(const panda_controllers::InfoDebugConstPtr& 
   }
 }
 
+// Subscribe to Impedance Values calculated from stifness adapter --> modulator.cpp in this code
+
 //----------- DESIRED IMPEDANCE -------------//
 void impedance_loop::desiredImpedanceProjectCallback(
      		const panda_controllers::DesiredImpedanceConstPtr& msg){
 
-	// for (int i=0; i<6; i++){
-	// 	for (int j=0; j<6; j++){
-	// 		KD(i, j) = msg->stiffness_matrix[i*6 + j];
-	// 		BD(i, j) = msg->damping_matrix[i*6 + j];
-	// 	}
-	// }
+	 for (int i=0; i<6; i++){
+	 	for (int j=0; j<6; j++){
+	 		KD(i, j) = msg->stiffness_matrix[i*6 + j];
+	 		BD(i, j) = msg->damping_matrix[i*6 + j];
+	 	}
+	 }
 }
 
 

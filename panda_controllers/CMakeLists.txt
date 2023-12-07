@@ -1,3 +1,14 @@
+## Master Thesis Projet
+
+
+## Munich Institute of Robotics and Machine Intelligence (MIRMI), TUM Universität 
+## with collaboration of Centro Piaggio, Dipartimento di Ingegneria, Universita´ di Pisa
+
+
+##------------------Author: Rachele Nebbia Colomba-------------------------------------##
+
+## CMake FIles for Adaptive Dual Admittance Controller ##
+
 cmake_minimum_required(VERSION 3.0.2)
 project(panda_controllers)
 
@@ -5,7 +16,6 @@ set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-## Cose che ho aggiunto contrassegnate con ##
 find_package(catkin REQUIRED COMPONENTS
   controller_interface
   dynamic_reconfigure
@@ -26,14 +36,16 @@ find_package(Eigen3 REQUIRED)
 find_package(ALGLIB REQUIRED)
 find_package(Franka 0.9.0 REQUIRED)
 
+#insert ros messages list 
+## custom created file signed with * 
 add_message_files(FILES
   InfoMsg.msg
-  RobotState.msg
+  RobotState.msg 
   DesiredProjectTrajectory.msg
-  EEpose.msg
-  InfoDebug.msg
-  CompliantTraj.msg
-  DesiredImpedance.msg
+  EEpose.msg #* end-effector pose in terms of position and orientation 
+  InfoDebug.msg #* utils for debug and visualization of results
+  CompliantTraj.msg #* compliant new trajectory computed from the external loop
+  DesiredImpedance.msg #* values of "fictious" impedance
 )
 
 ##
@@ -70,10 +82,10 @@ catkin_package(
 )
 
 add_library(${PROJECT_NAME}
-  src/motion_control_dq.cpp #controller 
-  src/impedance_control_dq.cpp 
-  src/dual_arm_control.cpp #dual arm controller 
-  src/Dynamics.cpp
+  src/motion_control_dq.cpp #single arm motion control controller 
+  src/impedance_control_dq.cpp #impedance external loop
+  src/dual_arm_control.cpp #dual arm motion controller 
+  src/Dynamics.cpp #dynamics matrices of manipulator got trought indentifaction algortihms 
   src/parsing_utilities.cpp #util for yaml parameters
 ) 
 
@@ -115,21 +127,13 @@ include_directories(
 #   src/commands.cpp
 # )
 
-add_executable(commands_dual
+add_executable(commands_dual #computation of desired trajetory in terms of minimu jerk interpolation
    src/commands_dual.cpp
 )
 
 add_executable(modulator
   src/modulator.cpp
 )
-
-# add_executable(modulator_2
-#   src/modulator_2.cpp
-# )
-
-# add_executable(dq_trajectory
-#    src/dq_trajectory.cpp
-#  )
 
 add_executable(impedance_loop
   src/impedance_loop.cpp
@@ -138,12 +142,6 @@ add_executable(impedance_loop
 add_executable(dual_impedance_loop
   src/dual_impedance_loop.cpp
 ) 
-
-# target_link_libraries(commands PUBLIC
-#   ${Franka_LIBRARIES}
-#   ${catkin_LIBRARIES}
-#   dqrobotics
-# )
 
 target_link_libraries(commands_dual PUBLIC
   ${Franka_LIBRARIES}
@@ -157,17 +155,6 @@ target_link_libraries(modulator PUBLIC
   dqrobotics
 )
 
-# target_link_libraries(modulator_2 PUBLIC
-#   ${Franka_LIBRARIES}
-#   ${catkin_LIBRARIES}
-#   dqrobotics
-# )
-
-# target_link_libraries(dq_trajectory PUBLIC
-#   ${Franka_LIBRARIES}
-#   ${catkin_LIBRARIES}
-#   dqrobotics
-# )
 
 target_link_libraries(impedance_loop PUBLIC
   ${Franka_LIBRARIES}
@@ -181,31 +168,12 @@ target_link_libraries(dual_impedance_loop PUBLIC
   dqrobotics
 )
 
-# target_link_libraries(impedance_loop ${PROJECT_NAME})
-# target_link_libraries(commands ${PROJECT_NAME})
-# target_link_libraries(dq_trajectory ${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
   ${Franka_LIBRARIES}
   ${catkin_LIBRARIES}
 )
 
-# target_include_directories(dq_trajectory PUBLIC
-#   ${catkin_INCLUDE_DIRS}
-# )
-# target_link_libraries(dq_trajectory ${PROJECT_NAME}
-#   ${Franka_LIBRARIES}
-#   ${catkin_LIBRARIES}
-#   dqrobotics
-#   dqrobotics-interface-vrep)
-
-# add_dependencies(commands
-#   ${${PROJECT_NAME}_EXPORTED_TARGETS}
-#   ${catkin_EXPORTED_TARGETS}
-#   ${PROJECT_NAME}_generate_messages_cpp
-#   ${PROJECT_NAME}_gencpp
-#   ${PROJECT_NAME}_gencfg
-# )
 
 ## Installation
 install(TARGETS ${PROJECT_NAME}

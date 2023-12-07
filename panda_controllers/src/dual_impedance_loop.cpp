@@ -1,25 +1,44 @@
+// ---------------------------- IMPEDANCE CONTROL USING DQ LOGARITHM ------------------ //
+
+//    begin                : May 2023
+//    authors              : Rachele Nebbia Colomba
+//    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+//    email                : rachelenebbia <at> gmail <dot> com
+ 
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License see <http://www.gnu.org/licenses/>.
+//  **************************************************************************
+// Purpose: External Impedance Controller Loop for bimanual system composed of 2 7dof manipulators
+// Description: This represents the outer impedance controller for a bimanual system, that modifies the given desired trajectory into a compliant one based on estimation of
+//              the external forces and varianble impedance  to guarantee safe interaction.
+// Input: desired pose in terms of relative and absolute poses between the two arms
+// Output: compliant pose to be tracked from the inner motion controller (dual_arm_control.cpp)
+
+// Include
 #include "panda_controllers/dual_impedance_loop.h"
 #include <geometry_msgs/PoseStamped.h>
 
-
+// Define Parametes 
 #define     MASS          1.5                          // [kg]         apparent mass
-#define     SC            6                            // empyrically overdamping factor     
+#define     SC            6                            // empyrically  overdamping factor     
 #define     Kr_DEFAULT    800                          // [Nm]         default relative stiffness
-#define     Dr_DEFAULT    2*sqrt(Kr_DEFAULT*MASS);    // [Ns/m]       default relative damping
+#define     Dr_DEFAULT    2*sqrt(Kr_DEFAULT*MASS);     // [Ns/m]       default relative damping
 #define     Ka_DEFAULT    600                          // [Nm]         default absolutestiffness   
-#define     Da_DEFAULT    6*sqrt(Ka_DEFAULT*MASS);    // [Ns/m]       default absolute damping          
-#define     K_ROT         600               
+#define     Da_DEFAULT    6*sqrt(Ka_DEFAULT*MASS);     // [Ns/m]       default absolute damping          
+#define     K_ROT         600                          // default rotational 
 #define     D_ROT         2*sqrt(K_ROT*MASS);      
 #define     DZ_VALUE_F    2.0                          // dead zone value ext forces (?)       
 #define     DZ_VALUE_M    0.5                          // dead zone value ext torques (?)       
 
-using namespace DQ_robotics;   using namespace panda_controllers; 
+// Using namespace
+using namespace DQ_robotics;   
+using namespace panda_controllers; 
 using DQ_robotics::E_;
 using DQ_robotics::C8;
 
-// =========================DEFINE FUNCTIONS=====================//
+// ========================= DEFINE FUNCTIONS=====================//
 
-// ----DEAD ZONE FOR EXTERNAL FORCES-- // 
+// ----DEAD ZONE FOR EXTERNAL FORCES-- // // Needed in case of bad sensors and external disturbances are acting
 
 Vector6d dual_impedance_loop::dead_zone(Vector6d wrench_ext, double dz_value,double dz_value_torques){
    Vector6d wrench_n; 
@@ -48,14 +67,15 @@ for (int i = 3; i < 6; i++) {
 return wrench_n;
 }
 
+// Ema Filter for external forces
 double dual_impedance_loop::Filter(double y, double y_last){  
   double gain; 
   gain = 0.1; 
   return gain * y + (1 - gain) * y_last;
 }
 
+// Mapping external wrench to be consisting with DQ log
 Vector6d dual_impedance_loop::wrench_mapping(Vector6d wrench_ext,DQ x_hat){
-       // compute external wrench consistent with DQ log mapping
        Vector6d flog;  
        MatrixXd G = x_hat.generalized_jacobian();
        MatrixXd Q8 = getQ8(x_hat); 
@@ -67,14 +87,15 @@ Vector6d dual_impedance_loop::wrench_mapping(Vector6d wrench_ext,DQ x_hat){
     return flog;
     }
 
+// Mapping from external wrenches wrench_1, wrench_2 acting on the single EEs to be consistent with absolute and relative variables 
 void dual_impedance_loop::wrench_adaptor(Vector6d wrench_1,Vector6d wrench_2,DQ x1, DQ x2,DQ xa){
     //Linear mapping from the external wrenches measured at the EEs to the abs and rel frames
     DQ rot_dq; Vector4d r1;
     Vector3d p1,p2,pa,p1_a,p2_a; 
     Vector3d f1,f2,fa,Ma,fr,Mr; Vector6d wr1_1,wr2_1,wa,wr;
     p1 = vec3(x1.translation()); p2 = vec3(x2.translation()); pa = vec3(xa.translation());
-    r1 = vec4(x1.rotation()); rot_dq = DQ(r1); //rotation of left arm
-    //virtual stick displacement
+    r1 = vec4(x1.rotation()); rot_dq = DQ(r1); 
+    //virtual stick displacement model
     p1_a << pa - p1; p2_a << pa - p2; 
     //ext wrenches wrt to left arm frame (arbitrary) to compute relative force and torque
     wr1_1 = vec6(rot_dq.conj()*DQ(wrench_1)*rot_dq); 
@@ -85,15 +106,14 @@ void dual_impedance_loop::wrench_adaptor(Vector6d wrench_1,Vector6d wrench_2,DQ 
     fr = 0.5*(wr2_1.head(3) - wr1_1.head(3)); // rel force
     Ma = wrench_1.tail(3) + (p1_a).cross(f1) + wrench_2.tail(3) + (p2_a).cross(f2); // abs torque
     Mr = 0.5*(wr2_1.tail(3)- wr1_1.tail(3)); // rel torque
-    wa.head(3) << fa; 
-    wa.tail(3) << Ma; 
-    wr.head(3) << fr;  
-    wr.tail(3) << Mr;
-    wa.tail(3).setZero(); 
-    wr.tail(3).setZero();
+    wa.head(3) << fa; wa.tail(3) << Ma; 
+    wr.head(3) << fr; wr.tail(3) << Mr;
+    wa.tail(3).setZero(); // first case aproximation: no torque acting
+    wr.tail(3).setZero(); // first case aproximation: no torque acting
     coop_wrench.wa = wa; coop_wrench.wr = wr; 
 }
-   
+
+// retrieve admittance log equation    
 void dual_impedance_loop::admittance_eq(Vector6d flog_r,Vector6d flog_abs,Vector6d yr_hat,Vector6d dyr_hat,
                                             Vector6d ya_hat,Vector6d dya_hat,MatrixXd Kd_r,MatrixXd Bd_r,MatrixXd Md_r,
                                             MatrixXd Kd_a,MatrixXd Bd_a,MatrixXd Md_a,double time_prec, const double t){
@@ -101,7 +121,6 @@ void dual_impedance_loop::admittance_eq(Vector6d flog_r,Vector6d flog_abs,Vector
             adm_eq.ddyr_hat = Md_r.inverse()*(-Bd_r*dyr_hat-Kd_r*yr_hat-flog_r); 
             adm_eq.ddya_hat = Md_a.inverse()*(-Bd_a*dya_hat-Kd_a*ya_hat-flog_abs);           
             double cdt; 
-            // cdt = t-time_prec;
             cdt = 0.005; 
             //integrate
             adm_eq.dyr_hat  = adm_eq.ddyr_hat*cdt + adm_eq.dyr_hat;
@@ -110,7 +129,7 @@ void dual_impedance_loop::admittance_eq(Vector6d flog_r,Vector6d flog_abs,Vector
             adm_eq.ya_hat = adm_eq.dya_hat*cdt + adm_eq.ya_hat;
    
         }
-
+// Compute absolute and relative pose displacements 
 void dual_impedance_loop::compute_pose_disp(Vector6d yr_hat,Vector6d dyr_hat,Vector6d ddyr_hat,
                                                 Vector6d ya_hat,Vector6d dya_hat,Vector6d ddya_hat){
             //Compute pose displacement from des adm equation for relative and absolute pose
@@ -131,6 +150,7 @@ void dual_impedance_loop::compute_pose_disp(Vector6d yr_hat,Vector6d dyr_hat,Vec
             disp.ddxa_hat = Q8_a*ddya_hat + Q8_a_dot*dya_hat;
 }
 
+// Compute relative and absolute compliant trajectories to be tracked from the inner motion loop
 void dual_impedance_loop::compute_traj(Vector8d xr_d,Vector8d dxr_d,Vector8d ddxr_d,Vector8d xa_d,Vector8d dxa_d,Vector8d ddxa_d,
                             Vector8d xr_hat,Vector8d dxr_hat,Vector8d ddxr_hat,Vector8d xa_hat,Vector8d dxa_hat,Vector8d ddxa_hat){
         //Compute compliant trajectories for relative and absolute pose
@@ -175,11 +195,13 @@ bool dual_impedance_loop::init(ros::NodeHandle& node_handle){
     pub_compliant_traj = node_handle.advertise<panda_controllers::CompliantTraj>("/motion_control_dq/compliant_traj", 1);
 
   //---------------INITIALIZE VARIABLES---------------//
-    // VARIABLES
+    // Identity Matrices
+    I8 = MatrixXd::Identity(8, 8); I6 = MatrixXd::Identity(6, 6);
+    // Time variables
     time_prec = ros::Time::now().toSec(); // previous cyle time 
-    t = ros::Time::now().toSec(); // current ros time
+    t = ros::Time::now().toSec();         // current ros time
     t_init = ros::Time::now();
-    //Ext wrenches left arm 
+    //Ext wrenches acting left arm 
     wrench_ext_n_l_.setZero(); wrench_ext_l_.setZero(); 
     fx_l = 0; fy_l = 0; fz_l = 0; 
     fx_l_prec = 0; fy_l_prec = 0; fz_l_prec = 0; 
@@ -191,15 +213,15 @@ bool dual_impedance_loop::init(ros::NodeHandle& node_handle){
     pose_d_ << 1,0,0,0,0,0,0,0;  dpose_d_.setZero();  ddpose_d_.setZero();    // nominal absolute des trajectory                                         
     pose_r_d_ << 1,0,0,0,0,0,0,0;dpose_r_d_.setZero(); ddpose_r_d_.setZero(); // nominal relative des trajectory                                      
     xr_ << 1,0,0,0,0,0,0,0; xa_<< 1,0,0,0,0,0,0,0; x1_<< 1,0,0,0,0,0,0,0; x2_<< 1,0,0,0,0,0,0,0;  
-    I8 = MatrixXd::Identity(8, 8); I6 = MatrixXd::Identity(6, 6);
     //Initialize log displcaments
     adm_eq.yr_hat.setZero(), adm_eq.dyr_hat.setZero(), adm_eq.ddyr_hat.setZero();  // log mapping of rel displacement
     adm_eq.ya_hat.setZero(), adm_eq.dya_hat.setZero(), adm_eq.ddya_hat.setZero();  // log mapping of abs displacement
-    disp.xr_hat << 1,0,0,0,0,0,0,0;             // initial pose relative displacement 8x1
-    comp.xr_c << 1,0,0,0,0,0,0,0;               // desired relative compliant pose 8x1 
-    disp.xa_hat << 1,0,0,0,0,0,0,0;             // initial pose absolute displacement 8x1
-    comp.xa_c << 1,0,0,0,0,0,0,0;               // desired absolute compliant pose 8x1 
-    // Initialize stiffness and damping matrices
+    disp.xr_hat << 1,0,0,0,0,0,0,0;                                                // initial pose relative displacement 8x1
+    comp.xr_c << 1,0,0,0,0,0,0,0;                                                  // desired relative compliant pose 8x1 
+    disp.xa_hat << 1,0,0,0,0,0,0,0;                                                // initial pose absolute displacement 8x1
+    comp.xa_c << 1,0,0,0,0,0,0,0;                                                  // desired absolute compliant pose 8x1 
+    // Initialize stiffness and damping matrices to default values 
+    // (please note that the log mapping inverts the block matrices)
     KD_r.setIdentity(); BD_r.setIdentity();
     KD_a.setIdentity(); BD_a.setIdentity(); MD.setIdentity();
     KD_r(0,0)= K_ROT; KD_r(1,1)= K_ROT; KD_r(2,2)= K_ROT; //rotational
@@ -231,14 +253,8 @@ void dual_impedance_loop::update(){
    
    // DQ nominal desired poses
    pose_a_d_dq = (DQ(pose_d_)).normalize();  pose_r_d_dq = (DQ(pose_r_d_)).normalize(); 
-   
-   //=== Relative impedance
-  //  KD_r(0,0)= K_ROT; KD_r(1,1)= K_ROT; KD_r(2,2)= K_ROT; //rotational
-  //  KD_r(3,3)= Kr_DEFAULT; KD_r(4,4)= Kr_DEFAULT; KD_r(5,5)= Kr_DEFAULT; //translational
-  //  BD_r(0,0)= D_ROT;  BD_r(1,1)= D_ROT; BD_r(2,2)= D_ROT;
-  //  BD_r(3,3)= Dr_DEFAULT; BD_r(4,4)= Dr_DEFAULT; BD_r(5,5)= Dr_DEFAULT;
 
-   // == Absolute impedance
+   // Absolute impedance --> keep it fixed to default values 
    KD_a(0,0)= K_ROT; KD_a(1,1)= K_ROT; KD_a(2,2)= K_ROT;
    KD_a(3,3)= Ka_DEFAULT; KD_a(4,4)= Ka_DEFAULT; KD_a(5,5)= Ka_DEFAULT;
    BD_a(0,0)= D_ROT;  BD_a(1,1)= D_ROT; BD_a(2,2)= D_ROT;

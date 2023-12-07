@@ -1,4 +1,17 @@
-// ========================== IMPEDANCE CONTROLLER USING DQ LOG ========================= //
+// ---------------------------- IMPEDANCE CONTROL USING DQ LOGARITHM ------------------ //
+
+//    begin                : May 2023
+//    authors              : Rachele Nebbia Colomba
+//    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+//    email                : rachelenebbia <at> gmail <dot> com
+ 
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License see <http://www.gnu.org/licenses/>.
+//  **************************************************************************
+// Purpose: Impedance Controller Loop for Bimanual system
+// Description: This represent the computation of an impedance controller for bimanual system
+// Input: desired pose in terms of absolute and relative variables 
+// Output: torque vector
 
 //Include:
 #include <cmath>
@@ -16,15 +29,16 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/ros.h>
 
+// Using
 using DQ_robotics::DQ_SerialManipulator;
 using DQ_robotics::E_;
 using DQ_robotics::i_;
 using DQ_robotics::j_;
 using DQ_robotics::k_;
 using DQ_robotics::C8;
-
 using namespace DQ_robotics;
 
+// Define Parameters
 #define     MASS            1.5                         // [kg]         apparent mass
 #define     K_INIT          300                         // [Nm]         initial stiffness
 #define     D_INIT          2*sqrt(K_DEFAULT*MASS);     // [Ns/m]       initial damping
@@ -32,8 +46,8 @@ using namespace DQ_robotics;
 #define     D_DEFAULT       2*sqrt(K_DEFAULT*MASS);     // [Ns/m]       default translational damping
 #define     K_ROT           500                         // [N*rad]      defaul rotational stiffness
 #define     D_ROT           2*sqrt(K_ROT*MASS);         // [Ns/rad]     defaul rotational damping
-#define     DZ_VALUE        6    // dead zone values for external forces    
-#define 	D_JOINTS	    2    // dissipative term joints
+#define     DZ_VALUE        6                           // dead zone values for external forces    
+#define 	D_JOINTS	    2                           // dissipative term joints
 #define 	COLL_LIMIT		25  
 #define 	NULL_STIFF		2
 #define 	JOINT_STIFF		{3000, 3000, 3000, 3000, 3000, 2000, 100}
@@ -42,8 +56,8 @@ namespace panda_controllers {
 	
 // ---------- LOAD DQ ROBOT ------- //
 DQ_SerialManipulator ImpedanceControlDq::init_dq_robot() {
-	double r_B_O_[3] = {0.0, 0.0, 0.0};         // initial base translation
-	double B_Q_O_[4] = {1.0, 0.0, 0.0,0.0};    // intial base rotation
+	double r_B_O_[3] = {0.0, 0.0, 0.0};          // initial base translation
+	double B_Q_O_[4] = {1.0, 0.0, 0.0,0.0};      // intial base rotation
 
 	Matrix<double, 4, 7> franka_dh(4, 7);
   	franka_dh << 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  // theta (q)
@@ -55,7 +69,6 @@ DQ_SerialManipulator ImpedanceControlDq::init_dq_robot() {
   	DQ p = DQ(0.0, r_B_O_[0], r_B_O_[1], r_B_O_[2]);
   	DQ r = DQ(B_Q_O_[0], B_Q_O_[1], B_Q_O_[2], B_Q_O_[3]);
   	r = r * r.inv().norm();
-  	// std::cout << "Panda Reference Frame: " << r + 0.5 * E_ * p * r << std::endl;
   	robot.set_base_frame(r + 0.5 * E_ * p * r);
   	robot.set_reference_frame(r + 0.5 * E_ * p * r); 
   	return robot;

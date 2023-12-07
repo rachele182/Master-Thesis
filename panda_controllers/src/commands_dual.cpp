@@ -1,11 +1,28 @@
-#include <iostream>
+// ---------------------------- DUAL ARM CONTROL ------------------ //
 
+//    begin                : May 2023
+//    authors              : Rachele Nebbia Colomba
+//    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+//    email                : rachelenebbia <at> gmail <dot> com
+ 
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License see <http://www.gnu.org/licenses/>.
+//  **************************************************************************
+// Purpose: Computation of desired trajectory in terms of Dual Quaternion Poses 
+// Description: This represent the node to computed the nominal given trajetory to a bimanual system
+// Input: current dual-arm pose in terms of absolute and relative variables 
+// Output: desired trajectory computed in terms of minimun jerk interpolation
+
+// == Please note: this node was created with predefined DEMOS used during the live experiment: a troughful edit of the initial and final poses as well as of timing 
+// can be used to adapt the reference to required trajectories.
+
+// Include
+#include <iostream>
 #include <unistd.h>
 #include <cstdlib>
 #include <signal.h>
 #include <cmath>
 #include <math.h>
-
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
 #include "dqrobotics/DQ.h"
@@ -35,6 +52,7 @@ Vector8d x_abs_rec, x_rel_rec;
 Vector3d pos_abs_rec, pos_rel_rec; 
 Vector4d rot_a_rec, rot_r_rec; 
 
+// Define structure for desired relative and absolute pose
 struct traj_dual_struct{
       Vector3d pr_des;
       Vector3d vr_des;
@@ -50,6 +68,7 @@ struct traj_dual_struct{
       Vector4d ddor_a_des;
   } traj_dual;
 
+// Define structure for desired relative and absolute pose express in Dual Quaternion Algebra 
 struct traj_dual_dq_struct{
       Vector8d xa_des;
       Vector8d dxa_des;
@@ -80,16 +99,18 @@ void CoopPoseCallback(
 // ============================= FUNCTIONS ================================== //
 
 void dummy(Vector3d posr_i,Vector3d posa_i, double tf){
-        traj_dual.pr_des << posr_i; //relative
-        traj_dual.pa_des << posa_i; //absolute
-        traj_dual.vr_des.setZero();
+        traj_dual.pr_des << posr_i; //relative position
+        traj_dual.pa_des << posa_i; //absolute position 
+        traj_dual.vr_des.setZero(); 
         traj_dual.va_des.setZero();
         traj_dual.ar_des.setZero();
         traj_dual.a_des.setZero();
 }
 
 // ================================ DEMOS ========================================//
-Vector3d demo_contact (Vector3d posr_i, Vector3d posa_i, double time) {
+// == These functions were created to launch a simple DEMO use case to test controller in LAB == //
+
+  Vector3d demo_contact (Vector3d posr_i, Vector3d posa_i, double time) {
   Vector3d tmpr,tmpa;
   Vector3d phase; 
   Vector3d p_rel_ref, p_abs_ref;  
@@ -101,9 +122,6 @@ Vector3d demo_contact (Vector3d posr_i, Vector3d posa_i, double time) {
   pc = 0.8; 
   p_rel_ref <<0.0094338,0.00907125,0.489452-0.02; 
   p_abs_ref << 0.440214, 0.744113, 0.232157;  
-  // p_rel_ref << posr_i(0), posr_i(1), 0.488; 
-  // p_abs_ref << posa_i(0), posa_i(1), posa_i(2); 
-
 
   if(time>=0 && time<2){ //initial pause
     tmpr << posr_i; 
@@ -272,8 +290,6 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
     tmpa_or << rot_a_rec;
     or_r_f << tmp_or;
     or_a_f << tmpa_or; 
-    // or_r_f << rot_r_rec; 
-    // or_a_f << rot_a_rec;
     t_f = 8;
     t = time - 2; 
     phase(2) = 1;
@@ -282,8 +298,6 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
     tmpa << pos_a_rec;   
     pos_r_f << tmpr; 
     pos_a_f << tmpa;  
-    // tmp_or << rot_r_rec;
-    // tmpa_or << rot_a_rec;
     tmp_or << rot_r_rec;
     tmpa_or << rot_a_rec;
     or_r_f << tmp_or; 
@@ -296,8 +310,6 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
     tmpa << pos_a_rec;   
     pos_r_f << tmpr; 
     pos_a_f << tmpa(0), tmpa(1), tmpa(2) + z_offset;  
-    // tmp_or << rot_r_rec;
-    // tmpa_or << rot_a_rec;
     tmp_or << rot_r_rec;
     tmpa_or << rot_a_rec;
     or_r_f << tmp_or; 
@@ -310,8 +322,6 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
     tmpa << pos_a_rec(0), pos_a_rec(1), pos_a_rec(2) + z_offset;   
     pos_r_f << tmpr; 
     pos_a_f << pos_a_rec(0), pos_a_rec(1), pos_a_rec(2);  
-    // tmp_or << rot_r_rec;
-    // tmpa_or << rot_a_rec;
     tmp_or << rot_r_rec;
     tmpa_or << rot_a_rec;
     or_r_f << tmp_or; 
@@ -324,8 +334,6 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
     tmpa << pos_a_rec(0), pos_a_rec(1), pos_a_rec(2);   
     pos_r_f << tmpr(0), tmpr(1), tmpr(2) + zr_offset; 
     pos_a_f << pos_a_rec(0), pos_a_rec(1), pos_a_rec(2);  
-    // tmp_or << rot_r_rec;
-    // tmpa_or << rot_a_rec;
     tmp_or << rot_r_rec;
     tmpa_or << rot_a_rec;
     or_r_f << tmp_or; 
@@ -340,8 +348,6 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
     pos_a_f << tmpa;  
     tmp_or << rot_r_rec;
     tmpa_or << rot_a_rec;
-    // tmp_or << rot_r_rec;
-    // tmpa_or << rot_a_rec;
     or_r_f << tmp_or; 
     or_a_f << tmpa_or; 
     t = time - 29; 
@@ -349,20 +355,22 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
     phase(2) = 4; 
   }
    
-   //des traj for relative var
+  // == des traj for relative var --> minimun jerk interpolation
+  // translational position,velocity, acceleration
    traj_dual.pr_des << tmpr + (tmpr - pos_r_f)*(15*pow((t/t_f),4) - 6*pow((t/t_f),5) -10*pow((t/t_f),3));
    traj_dual.vr_des << (tmpr - pos_r_f)*(60*(pow(t,3)/pow(t_f,4)) - 30*(pow(t,4)/pow(t_f,5)) -30*(pow(t,2)/pow(t_f,3)));
    traj_dual.ar_des << (tmpr - pos_r_f)*(180*(pow(t,2)/pow(t_f,4)) - 120*(pow(t,3)/pow(t_f,5)) -60*(t/pow(t_f,3)));
-
+  // rotationall position,velocity, acceleration
    traj_dual.or_r_des << tmp_or + (tmp_or - or_r_f)*(15*pow((t/t_f),4) - 6*pow((t/t_f),5) -10*pow((t/t_f),3));
    traj_dual.dor_r_des << (tmp_or - or_r_f)*(60*(pow(t,3)/pow(t_f,4)) - 30*(pow(t,4)/pow(t_f,5)) -30*(pow(t,2)/pow(t_f,3)));
    traj_dual.ddor_r_des << (tmp_or - or_r_f)*(180*(pow(t,2)/pow(t_f,4)) - 120*(pow(t,3)/pow(t_f,5)) -60*(t/pow(t_f,3))); 
 
-   //des trj for absolute var
+   // == des traj for absolute var --> minimun jerk interpolation
+   // translational position,velocity, acceleration
    traj_dual.pa_des << tmpa + (tmpa - pos_a_f)*(15*pow((t/t_f),4) - 6*pow((t/t_f),5) -10*pow((t/t_f),3));
    traj_dual.va_des << (tmpa - pos_a_f)*(60*(pow(t,3)/pow(t_f,4)) - 30*(pow(t,4)/pow(t_f,5)) -30*(pow(t,2)/pow(t_f,3)));
    traj_dual.a_des << (tmpa - pos_a_f)*(180*(pow(t,2)/pow(t_f,4)) - 120*(pow(t,3)/pow(t_f,5)) -60*(t/pow(t_f,3)));
-
+   // rotational position,velocity, acceleration
    traj_dual.or_a_des << tmpa_or + (tmpa_or - or_a_f)*(15*pow((t/t_f),4) - 6*pow((t/t_f),5) -10*pow((t/t_f),3));
    traj_dual.dor_a_des << (tmpa_or - or_a_f)*(60*(pow(t,3)/pow(t_f,4)) - 30*(pow(t,4)/pow(t_f,5)) -30*(pow(t,2)/pow(t_f,3)));
    traj_dual.ddor_a_des << (tmpa_or - or_a_f)*(180*(pow(t,2)/pow(t_f,4)) - 120*(pow(t,3)/pow(t_f,5)) -60*(t/pow(t_f,3)));
@@ -370,7 +378,7 @@ Vector3d demo_box (Vector3d posr_i,Vector4d or_i, Vector3d posa_i, Vector4d or_a
    return phase; 
 }
 
-//Utils
+//Utils for analysisy 
 Vector3d compute_ref(Vector8d pose_rel_in){
   DQ pose_rel_dq; pose_rel_dq = (DQ(pose_rel_in)).normalize(); 
   DQ rot_r; 
@@ -392,7 +400,7 @@ Vector3d compute_ref(Vector8d pose_rel_in){
   
 }
 
-//lifting
+//lifting demo
 Vector3d demo_lifting (Vector3d posr_i, Vector3d posa_i, double time) {
   Vector3d tmpr,tmpa;
   Vector3d phase; 
@@ -402,7 +410,6 @@ Vector3d demo_lifting (Vector3d posr_i, Vector3d posa_i, double time) {
   p_rel_ref << posr_i; 
   p_abs_ref << posa_i(0), posa_i(1), posa_i(2)+0.25; 
   pc = 0.12; 
-  //pc = 0.11; 
 
   if(time>=0 && time<5){ //initial 
     tmpr << posr_i; 
@@ -468,12 +475,6 @@ Vector3d demo_lifting (Vector3d posr_i, Vector3d posa_i, double time) {
         //==DQ traj for relative pose   
         DQ x_des_dq,dx_des_dq,ddx_des_dq;  
         DQ or_dq_; //relative orientation
-        
-        // if(phase(2)==0 || phase(2)==1 || phase(2) ==2) {
-        //   or_dq_ = or_dq; 
-        // }else{
-        //   or_dq_ = or_n; //new relative rotation after stiff modulation
-        // }
         or_dq_ = or_dq; 
         pos_r_des_dq = DQ(posr_des);    
         x_des_dq = or_dq_ + 0.5*E_*(pos_r_des_dq*or_dq_); 
@@ -570,9 +571,7 @@ int main(int argc, char **argv)
   signal(SIGINT, signal_callback_handler);
   
 ////===== VARIABLES ======== //
-//==== Recorded poses ====== //
-// x_abs_rec << -0.0177016,0.898249,0.43819, -0.0287141,-0.352547,-0.0679401,0.108691,-0.249321;
-// x_rel_rec << -0.00452771,-0.632865,-0.774156,0.0119421,0.0104606,0.1547,-0.126511,0.00102879;  
+// Recored poses //
 x_abs_rec << -0.0946609 ,0.90378,0.34483,-0.235189,-0.294969,-0.151636,0.121554,-0.285763; 
 x_rel_rec << -0.00159868,-0.745495,-0.666262,0.0181218,0.013443,0.13342,-0.148851,0.0172249; 
 x_abs_rec_dq = (DQ(x_abs_rec)).normalize(); x_rel_rec_dq = (DQ(x_rel_rec)).normalize(); 
@@ -595,7 +594,7 @@ int choice;
   
   while (ros::ok())
   {
-    cout<<"choice:   (1:dummy, 2:contact, 3:demo, 4:demo_box_2, 5:demo_lifting) "<<endl;
+    cout<<"choice:   (1:dummy, 2:contact, 3:demo, 4:demo_box_2, 5:demo_lifting) "<<endl; //print out screen to choose demo
     cin>>choice;
 
     if(choice == 1){
@@ -628,6 +627,8 @@ int choice;
   
     t_init = ros::Time::now();
     t = (ros::Time::now() - t_init).toSec();
+  
+  // Loop generation of nominal trajectory based on DEMO choice
 
   while (t <= tf){
        if (choice == 1){

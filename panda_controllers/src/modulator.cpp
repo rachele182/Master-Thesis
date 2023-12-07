@@ -1,3 +1,19 @@
+// ----------------------------Impedance Modulation Node ------------------ //
+
+//    begin                : May 2023
+//    authors              : Rachele Nebbia Colomba
+//    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+//    email                : rachelenebbia <at> gmail <dot> com
+ 
+
+// This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License see <http://www.gnu.org/licenses/>.
+//  **************************************************************************
+// Purpose: Modulate Impedance gain for the outer admittance controller 
+// Description: This represents the "modulation" of the impedance gains for an admittance controller of a bimanual system
+// Use case study: in this case we want to modulate online relative stiffness gains to guarantee grasp feasibility + soft interaction in a common grasping task 
+// Input: current pose + desired pose of bimanual system
+// Output: Kr, Dr matrices, stiffness and damping relative matrices respectively 
+
 #include <iostream>
 
 #include <unistd.h>
@@ -33,10 +49,11 @@
 
 typedef Matrix<double, 8, 1> Vector8d; typedef Matrix<double, 6, 1> Vector6d;
 
+//using 
 using namespace DQ_robotics; using namespace std;  using namespace panda_controllers; 
 
 //VARIABLES
-double k;                                   // stiffness value (1 DOF)
+double k;                                  // stiffness value (1 DOF)
 double d;                                  // damping value (1 DOF) 
 double K[36];                              // stiffness matrix
 double D[36];                              // damping matrix
@@ -71,8 +88,7 @@ void signal_callback_handler(int signum) {
    exit(signum);
 }
 
-// Callback for robots coop variabòes
-
+// Callback for robots coop variables (absolute,relatvie poses)
 void cdts_var_Callback(const panda_controllers::InfoDebugConstPtr& msg){
     for (int i=0; i<8; i++){
           x1_(i) = msg->x1[i];
@@ -82,6 +98,7 @@ void cdts_var_Callback(const panda_controllers::InfoDebugConstPtr& msg){
           }
 }
 
+// Callback for computed compliant trajectory on coop variables
 void CompliantTrajCallback(
     	const panda_controllers::CompliantTraj::ConstPtr& msg) {
 			for (int i=0; i<8; i++){
@@ -97,6 +114,7 @@ void CompliantTrajCallback(
         }
 		}										
 
+// Callback for nominal desired trajectory
 void desiredProjectTrajectoryCallback(
     	const panda_controllers::DesiredProjectTrajectoryConstPtr& msg) {
     phase << msg->phase_array[0], msg->phase_array[1], msg->phase_array[2]; 
@@ -105,7 +123,7 @@ void desiredProjectTrajectoryCallback(
 
 // =================== FUNCTIONS ===================== //
    
-// ==-----Compute impedance gains modulation of translational relative stiffness----- == // 
+// ==-----Compute impedance gains modulation of translational relative stiffness == ------ // 
 
 Vector2d compute_gains(double ki,int phase,ros::Time t_curr,ros::Time time_prec){
 
@@ -113,15 +131,13 @@ Vector2d compute_gains(double ki,int phase,ros::Time t_curr,ros::Time time_prec)
     double k_min, k_max,k_max_2,k_rid,k_default,mass, beta, a0, csi,sc; 
     k_max = 1300;
     k_max_2 = 1300; 
-    // k_max = 800;
-    // k_max_2 = 900; 
     k_min = 30;
     k_default = K_DEFAULT; 
     k_rid = 600; 
     mass = 1.5; 
     beta = 0.98;
     a0 = 0.95;
-    csi = 1; 
+    csi = 1;
     sc = 2; //empyrically overdamped scale factor
     
     //variables
@@ -130,17 +146,17 @@ Vector2d compute_gains(double ki,int phase,ros::Time t_curr,ros::Time time_prec)
     double d; 
     double k_temp; 
 
-    if(phase==0){
+    if(phase==0){          //initial pahse
         ki = k_default;
         d = 2*sqrt(ki); 
-    }else if(phase==1){ // approach pahse
+    }else if(phase==1){    // approach pahse
             ki = alpha*ki; // decrease k arbitrarly
             d = sc*sqrt(ki*mass); 
             if(ki < k_rid){
                 ki = k_rid;
                 d = sc*sqrt(ki*mass);
         }       
-    }else if(phase==2){ //squeeze phase
+    }else if(phase==2){    //squeeze phase
         sc = 2; 
         double k_dot; 
                 double interval = (t_curr - time_prec).toSec();
@@ -152,7 +168,7 @@ Vector2d compute_gains(double ki,int phase,ros::Time t_curr,ros::Time time_prec)
                     ki = k_max;
                     d = sc*sqrt(ki*mass); 
                 }
-    }else if(phase==3){ //compensate weight
+    }else if(phase==3){    //compensate weight to guarantee grasp fesability
         sc = 2; 
         double k_dot; 
                 double interval = (t_curr - time_prec).toSec();
@@ -164,8 +180,8 @@ Vector2d compute_gains(double ki,int phase,ros::Time t_curr,ros::Time time_prec)
                     ki = k_max_2;
                     d = sc*sqrt(ki*mass); 
                 }
-    }else if(phase==4){ //release and eq phase
-        ki = alpha*ki; // decrease k arbitrarly
+    }else if(phase==4){   //release and eq phase
+        ki = alpha*ki;    // decrease k arbitrarly
         d = 2*sqrt(ki*mass); 
             if(ki < k_default){
               ki = k_default;
@@ -247,6 +263,9 @@ Vector2d compute_gains_rot(double ki,int phase,ros::Time t_curr,ros::Time time_p
         gains_rot << k,d; 
     return gains_rot; 
     }
+
+
+// ==== This can be added and in the future better developed to handle the manipulation of multiple object with different compliance characteristics === //
 
 // ==-----Compute impedance gains modulation of translational absolute stiffness----- == // 
 
