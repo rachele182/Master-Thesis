@@ -5,7 +5,7 @@
 %%relative and absolute pose (xr,xa)                                                             
 %%Adapt relative stiffness values to guarantee safe interaction with obj + external disturbance rejection.
 
-%% Simulation: grasping of an object + additional disturbance weight. 
+%% Simulation: grasping of an object + additional disturbance weight (with constant gradient) 
 
 include_namespace_dq;
 
