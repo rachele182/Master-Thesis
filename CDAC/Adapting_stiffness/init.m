@@ -1,3 +1,11 @@
+%    begin                : January 2023
+%    authors              : Rachele Nebbia Colomba
+%    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+%    email                : rachelenebbia <at> gmail <dot> com
+
+%%Description: Init file for grasping task simulation of bimanual system
+%Here you can find all the parameters set (and editable)
+
 %% Load data file
 %% Clear workspace
 clear;
@@ -13,7 +21,7 @@ addpath(p1,p2,p3,p4);
 
 disp('Loading parameters..')
 
-%% Parameters
+%% Simulation time Parameters
 cdt = 0.01; %[s] sampling time
 tfin = 4; %s 
 time = 0:cdt:tfin; %simulation time
@@ -31,7 +39,7 @@ I = eye(6);
 Md1 = 1.5*I; %desired mass [kg]
 Md2 = Md1; 
 Kd1 = 300*I; %desired stiffness [N/m]
-Bd1 = sqrt(4*Kd1*Md1); %desired damping [Ns/m]
+Bd1 = sqrt(4*Kd1*Md1); %desired damping [Ns/m] 
 
 %%Default values for rotational stiffness/damping
 k_def = 300;
@@ -46,10 +54,10 @@ kd = 30;
 ki = 100;
 
 %% Environment parameters
-g = 9.81; % [m/s^2]
+g = 9.81; % [m/s^2] %gravity 
 mass_obj = 0.5; % [kg]
-weight = mass_obj*g; % [N]
-width = 0.1; %[m]
+weight = mass_obj*g; % [N] %object weight
+width = 0.1; %[m] object dimension
 k_table = 5000; %N/m, environment stiffness
 k_obj = 500; %N/m, object stiffness
 

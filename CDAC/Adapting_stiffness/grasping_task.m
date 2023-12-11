@@ -1,30 +1,44 @@
 
-%% Adaptive Admittance Control for Cooperative Manipulation (CDAC)
+%%Adaptive Admittance Control for Cooperative Manipulation (CDAC)
 
-%%Description: Admittance control on CDTS variable to enforce mass-damper-spring system between on 
-%%relative and absolute pose (xr,xa)                                                             
-%%Adapt relative stiffness values to guarantee safe interaction with obj + external disturbance rejection.
+%    begin                : January 2023
+%    authors              : Rachele Nebbia Colomba
+%    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+%    email                : rachelenebbia <at> gmail <dot> com
 
-%% Simulation: grasping of an object + additional disturbance weight (with constant gradient) 
+% Description: Grasping task simulation with a bimanual system using variable admittance controller with dual qauqaternions.
+%              grasping of an object + additional disturbance weight (with constant gradient) 
 
+% Functions loaded: 1) grasp_traj_ad.m --> computes the nominal trajectory 
+%                   2) wrench_ext-grasp_task.m --> simulates the external forces sesned on the two arms during grasping task
+%                   3) wrench_mapping.m --> maps the external wrenches measured on EE1 and EE2 to cooperative variables (absolute and relative)
+%                   4) rel_stiff_adapter.m --> modulates the relative stiffness to guarantee both grasp feasibility and low internal stresses
+%                   5) admittance_contro.m --> external admittance loop --> computes the compliant trajetory to be tracked by the inner motion controller       
+
+%include dual quaternion namespace
 include_namespace_dq;
 
 %% Initialize variables
-%%admittance variables absolute pose
+
+%admittance variables absolute pose 
+%xc1,dx1,ddxc1 = vec8 [8x1] representing compliant pose, velocity and acceleration respectively
 xc1_data = zeros(size(time,2),8);
 dxc1_data = zeros(size(time,2),8);
 ddxc1_data = zeros(size(time,2),8);
+%yr1,dyr1 = vec6 [6x1] representing logarithm mapping of pose displacement between nominal and compliant absolute pose
 yr1_data = zeros(size(time,2),6);
 dyr1_data =  zeros(size(time,2),6);
 
-%%admittance variables relative pose
+%admittance variables relative pose 
+%xc2,dx2,ddxc2 = vec8 [8x1] representing compliant pose, velocity and acceleration respectively
+%yr2,dyr2 = vec6 [6x1] representing logarithm mapping of pose displacement between nominal and compliant relative pose 
 xc2_data = zeros(size(time,2),8);
 dxc2_data = zeros(size(time,2),8);
 ddxc2_data = zeros(size(time,2),8);
 yr2_data = zeros(size(time,2),6);
 dyr2_data =  zeros(size(time,2),6);
 
-%%stiffness and damping
+%%stiffness and damping data 
 kx_data = zeros(size(time,2),1);
 ky_data = zeros(size(time,2),1);
 kz_data = zeros(size(time,2),1);
@@ -36,7 +50,7 @@ wr_ext_data = zeros(size(time,2),6); %external wrench mapped to rel task-space  
 psi_ext_a_data = zeros(size(time,2),6); %external wrench mapped to abs task-space (xa frame)
 psi_ext_r_data = zeros(size(time,2),6); %external wrench mapped to abs task-space (xr frame)
 
-%stiffness adapter 
+%stiffness adapter, initialize parameter
 cnstKout =0;
 
 %% Initialize V-REP interface
@@ -58,19 +72,19 @@ disp(' ');
 fep1  = fep_vreprobot1.kinematics();
 fep2  = fep_vreprobot2.kinematics();
 
-%% Build dual-arm system
+%% Build dual-arm system (Cooperative Dual Task Space)
 panda_bimanual = DQ_CooperativeDualTaskSpace(fep1,fep2);
 
 %% Get Joint Handles
 
 handles = get_joint_handles(vi,vi.clientID);
-joint_handles1 = handles.armJoints1;
+joint_handles1 = handles.armJoints1; 
 joint_handles2 = handles.armJoints2;
 disp(' ');
 disp('============== Initial State of the Cooperative System ==============')
 disp(' ');
 % Get initial state of the robot (Using VRep Matlab Remote API directly)
-qstr = '[ ';
+qstr = '[ '; 
 qdotstr = '[ ';
 
 for j=1:7
@@ -80,11 +94,12 @@ for j=1:7
     qdotstr = [qdotstr,num2str(qdot(j)),' '];
 end
 
+%Display initial robot configuration left arm
 qstr = [qstr,']'];
 qdotstr = [qdotstr,']'];
-disp('Initial Joint positions for Franka1: ');
+disp('Initial Joint positions for Franka: ');
 disp(qstr);
-disp('Initial Joint velocities for Franka1: ');
+disp('Initial Joint velocities for Franka: ');
 disp(qdotstr);
 qstr = '[ ';
 qdotstr = '[ ';
@@ -96,7 +111,7 @@ for j=1:7
     qdotstr = [qdotstr,num2str(qdot(j)),' '];
 end
 
-%Display initial robot configuration 
+%Display initial robot configuration right arm 
 qstr = [qstr,']'];
 qdotstr = [qdotstr,']'];
 disp(' ');
@@ -122,19 +137,19 @@ p_in_2 = xin_2.translation.q(2:4);
 r0_1 = xin_1.rotation;
 r0_2 = xin_2.rotation;
 
-q_in = [q1_in;q2_in]; % augmented joint vector
+q_in = [q1_in;q2_in]; % augmented initial joint angles vector 
 
-%%Initial relative and absolute pose
+%%Initial relative and absolute poses
 xr_in = panda_bimanual.relative_pose(q_in);
 xa_in = panda_bimanual.absolute_pose(q_in);
 
 r0 = vec4(xa_in.P);   %orientation of absolute frame
 r0_r = vec4(xr_in.P); %orientation of relative frame
 
-%% Nominal absolute and relative pose trajectories
+%% Load Nominal absolute and relative pose trajectories
 [xa_d,dxa_d,ddxa_d,xr_d,dxr_d,ddxr_d,grasp_data,phase_data] = grasp_traj_ad(xin_1,xin_2,time);
 
-%% Setting to synchronous mode
+%% Setting coppeliaSim simulation to synchronous mode
 %---------------------------------------
 sim.simxSynchronous(clientID,true);
 sim.simxSynchronousTrigger(clientID);
@@ -163,21 +178,22 @@ qm2 = double([qmread2])';
 %stacked joint angles vector
 qm = [qm1;qm2];
 
-%Get CDTS Jacobians
-Ja = panda_bimanual.absolute_pose_jacobian(qm);
-Jr = panda_bimanual.relative_pose_jacobian(qm); 
+%% Get CDTS Jacobians
+%---------------------------------------
+Ja = panda_bimanual.absolute_pose_jacobian(qm); %absolute pose Jacobian
+Jr = panda_bimanual.relative_pose_jacobian(qm); %relative pose Jacobian  
 
-%% Prepare data to be stored
-data.qm = [];  data.qm_dot = []; 
-data.tau1_send = []; data.tau1_read = []; data.tau2_send = []; data.tau2_read = []; 
-data.f_ext = []; data.fa_ext = []; data.fr_ext = [];  data.Ma = []; data.Mr = []; data.f1_ext = []; data.f2_ext = []; 
-data.x1 = []; data.x2 = []; data.pos1 = []; data.pos2 = []; 
-data.xr_des = [];  data.xr = [];  data.xa = []; data.xa_des = []; data.pos1_c = []; data.pos2_c = [];
-data.pos_a = [];  data.pos_abs_d = [];
-data.pos_r = []; data.pos_r_d = []; 
-data.kd1 = []; data.bd1 = []; 
+%% Prepare data for analysys
+data.qm = [];  data.qm_dot = []; %joint angles + joint velocities 
+data.tau1_send = []; data.tau1_read = []; data.tau2_send = []; data.tau2_read = []; %torque vectors to the two arms: computed (tau_send) + torque vectors read from Coppeliasim (tau_read)
+data.f_ext = []; data.fa_ext = []; data.fr_ext = [];  data.Ma = []; data.Mr = []; data.f1_ext = []; data.f2_ext = []; %external forces
+data.x1 = []; data.x2 = []; data.pos1 = []; data.pos2 = []; %EE poses --> x1,x2 = 8x1 EE pose for left and right arm respectively + pos1,pos2 = 3x1 EE position for left and right arm respectively
+data.xr_des = [];  data.xr = [];  data.xa = []; data.xa_des = []; data.pos1_c = []; data.pos2_c = []; %relative and absolute poses 
+data.pos_a = [];  data.pos_abs_d = []; %current absolute pose + nominal absolute traj
+data.pos_r = []; data.pos_r_d = [];  %current relative pose + nominal relative traj
+data.kd1 = []; data.bd1 = []; %stiffnes and damping values
 data.kd2 = []; data.bd2 = []; 
-data.norm = [];
+data.norm = []; %error norm 
 
 % time
 inittime = sim.simxGetLastCmdTime(clientID) %retrieves the simulation time (ms) of the last fetched command
@@ -218,7 +234,7 @@ while sim.simxGetConnectionId(clientID)~=-1
     qm2 = double([qmread2])';
     qm_dot2 = (qm2-qmOld2)/cdt;
 
-    %Current dual-arm joint configuration
+    %Current dual-arm joint configuration 
     qm = [qm1;qm2];
     qm_dot = [qm_dot1;qm_dot2];
 
@@ -236,6 +252,7 @@ while sim.simxGetConnectionId(clientID)~=-1
     Jr = panda_bimanual.relative_pose_jacobian(qm); 
     Ja = panda_bimanual.absolute_pose_jacobian(qm);
     
+    %Compute relative absolute velocity task-space
     dxr = Jr*qm_dot; 
     dxa = Ja*qm_dot; 
     
@@ -250,20 +267,22 @@ while sim.simxGetConnectionId(clientID)~=-1
     data.pos2(:,i) = vec4(DQ(x2).translation);
     data.pos_r(:,i) = vec4(DQ(xr).translation); 
 
-    %Get robot dynamics
+    %Get robots dynamics
     M1 = get_MassMatrix(qm1);
     M2 = get_MassMatrix(qm2);
     g1 = get_GravityVector(qm1);
     g2 = get_GravityVector(qm2);
     c1 = get_CoriolisVector(qm1,qm_dot1);
     c2 = get_CoriolisVector(qm2,qm_dot2);
+
+    %dual-arm augmented dynamics
     M = blkdiag(M1,M2);
     g = [g1;g2];
     c = [c1;c2];
     
     %% Admittance control
     % initialize variables
-    if i~=1
+    if i~=1 %first step of simulation 
         % abs pose
         xr1_adm = xc1_data(i-1,:)';
         yr1_in = yr1_data(i-1,:)';
@@ -284,8 +303,8 @@ while sim.simxGetConnectionId(clientID)~=-1
         e_in2 = vec8(DQ(xr2_adm)'*DQ(xr_d(1,:)));
         yr2_in = vec6(log(DQ(e_in2)));
         dyr2_in = zeros(6,1);
-        %stiff adapter
-        cnstK = 100;
+        %stiff adapter initialize
+        cnstK = 100; 
         cnstF = 0;
         %
     end
@@ -340,7 +359,7 @@ while sim.simxGetConnectionId(clientID)~=-1
 
     %%retrieve position
     pos_a = vec4(DQ(xa).translation); %current absolute position
-    p_a = [pos_a(2);pos_a(3);pos_a(4)]; 
+    p_a = [pos_a(2);pos_a(3);pos_a(4)];  %map in vector 
 
     if i == 1
         delta = zeros(4,1);
@@ -421,35 +440,36 @@ while sim.simxGetConnectionId(clientID)~=-1
     %%Define error
     er = xd2_des - xr; %relative pose error
     ea = xd_des - xa;  %absolute pose error
-    e = [er;ea]; 
+    e = [er;ea]; %augmented error 
     de = [dxd2_des-dxr;dxd_des - dxa];
-    ei = e + cdt*de; 
+    ei = e + cdt*de; %integrative part 
     
     %display errors each simulation step
     disp(['it: ',num2str(i),' time(',num2str(i*cdt),') - err_pose_rel:',num2str(norm(er))])
     disp(['it: ',num2str(i),' time(',num2str(i*cdt),') - err_pose_abs:',num2str(norm(ea))])
-
+    %display error norm
     data.norm(:,i) = norm(e);
     
     %%Compute control input joint space
     Jaug = [Jr;Ja]; %augmente CDTS Jacobian
-    Jaug_dot = [Jr_dot;Ja_dot]; %augmente CDTS Jacobian derivative 
-    Jinv = pinv(Jaug);
+    Jaug_dot = [Jr_dot;Ja_dot]; %augmented CDTS Jacobian derivative 
+    Jinv = pinv(Jaug); %pseudo inverse augmented CDTS Jacobian
     ddxd_aug_des = [ddxd2_des; ddxd_des]; 
+    %Control input joint space 
     aq = Jinv*( ddxd_aug_des + kd*eye(16)*de + kp*eye(16)*e + ki*eye(16)*ei - Jaug_dot*qm_dot); 
 
     %%Feedback linearization
     tau = M*aq + c + g ;
     
-   %% Null-space controllers
-   
-   P1 = eye(7) - pinv(J1)*J1; %null-space projector1
-   P2 = eye(7) - pinv(J2)*J2; %null-space projector2
-   D_joints = eye(7)*2;
-   K_joints = eye(7)*10; 
-   %dissipative term + joints-limits avoidance
-   tau_null1 = P1*(-D_joints*qm_dot1+ K_joints*(qc-qm1));
-   tau_null2 = P2*(-D_joints*qm_dot2 + K_joints*(qc-qm2));
+    %% Null-space controllers
+    P1 = eye(7) - pinv(J1)*J1; %null-space projector1
+    P2 = eye(7) - pinv(J2)*J2; %null-space projector2
+    D_joints = eye(7)*2;
+    K_joints = eye(7)*10; 
+
+    %dissipative term + joints-limits avoidance projected in the null-space of the Jacobians
+    tau_null1 = P1*(-D_joints*qm_dot1+ K_joints*(qc-qm1));
+    tau_null2 = P2*(-D_joints*qm_dot2 + K_joints*(qc-qm2));
   
     %% Torque commands
 
@@ -462,7 +482,7 @@ while sim.simxGetConnectionId(clientID)~=-1
 
     %% Send torques to robots
 
-    %Panda1
+    %Panda1 --> send torques to CoppeliaSim
     for j=1:7
         if tau1(j)<0
             set_vel1 = -99999;
@@ -474,7 +494,8 @@ while sim.simxGetConnectionId(clientID)~=-1
         sim.simxSetJointForce(clientID,joint_handles1(j),abs(tau1(j)),sim.simx_opmode_blocking);
         [~,tau_read1] = sim.simxGetJointForce(clientID,joint_handles1(j),sim.simx_opmode_blocking);
         tau_read_data1(:,j) = tau_read1;
-        
+    
+    %Panda2 --> send torques to CoppeliaSim
         if tau2(j)<0
             set_vel2 = -99999;
         else
@@ -487,22 +508,8 @@ while sim.simxGetConnectionId(clientID)~=-1
         tau_read_data2(:,j) = tau_read2;
     end
     
+    %save data 
     data.tau1_read(i,:) = tau_read_data1';
-
-    %Panda2
-    for j=1:7
-        if tau2(j)<0
-            set_vel = -99999;
-        else
-            set_vel = 99999;
-        end
-
-        sim.simxSetJointTargetVelocity(clientID,joint_handles2(j),set_vel,sim.simx_opmode_blocking);
-        sim.simxSetJointForce(clientID,joint_handles2(j),abs(tau2(j)),sim.simx_opmode_blocking);
-        [~,tau_read2] = sim.simxGetJointForce(clientID,joint_handles2(j),sim.simx_opmode_blocking);
-        tau_read_data2(:,j) = tau_read2;
-
-    end
     data.tau2_read(i,:) = tau_read_data2';
     
     time_check = sim.simxGetLastCmdTime(clientID)
