@@ -12,7 +12,7 @@ _launch_: launch ros files for dual controller, admittance loop, and trajectory 
 _msg_: customed ros mgs for publisher and subscriber nodes. 
 3. **rosbag**: it contains the recorded data from different grasping tasks experiments and the script used to plot those data in matlab eg:  
 _extrac_data.m_  
-4. demoplots: it contains all the visual results of the threee different experiments carried out in terms of .svg images and .mov videos.
+4. **demoplots**: it contains all the visual results of the threee different experiments carried out in terms of .svg images and .mov videos.
 
 A brief guide trough the **main** files and the workflow is reported below:
 - **Single arm** framework:
@@ -32,5 +32,5 @@ Idea to run the grasping task dual-arm experiment:
 --- start rose node commands_dual and choose the preferred DEMO.   
 
 
-****NB**** Please note that **CMake.txt** represents the configuration file used to determine the ros settings and the nodes being launches. 
+****NB**** Please note that **CMake.txt** represents the configuration file used to determine the ros settings and the nodes being launched. 
 This need to be edited carefully and adapted for local use. 

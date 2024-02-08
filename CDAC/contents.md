@@ -8,19 +8,16 @@ Here after you can find an overview of the contents of the folder that includes 
   **Files**: 
     - init.m = initialization file to setup the environment;
     - grasping_task.m = main simulation file;
-    - grasping_tasl_absolute_adatation.m = main simulation file, both relative and absolute stiffness are changed during the task;
+    - grasping_task_absolute_adaptation.m = main simulation file, both relative and absolute stiffness are changed during the task;
     - abs_stiff_adapter.m, rel_stiff_adapter.m = modulator of admittance gains;
     - grasp_traj_ad.m, gripper_traj.m = scripts containing the minimum jerk interpolation to compute the nominal trajectory;
     - admittance_control.m = outer admittance loop to compute compliant trajectory;
-    - add_load.m, wrench_ext_grasp_task.m = scripts used to model the disturbance and the external forces on EEs rspectively;
+    - add_load.m, wrench_ext_grasp_task.m = scripts used to model the disturbance and the external forces on EEs respectively;
     - wrench_mapping.m = function used to map the external forces in the CDTS w.r.t to absolute and relative frame;
-    - stiff_fixed.m, trivial_solution.m = script used to compute easy task.  
+    - stiff_fixed.m, trivial_solution.m = script used to compute trivial task or with no stiffness adaptation. 
 - **Functions**:
-    - it contains all the utils functions used, e.g dynamics matrix robot-
+    - it contains all the utils functions used, e.g dynamics matrix robots and dual quaternion matrices to map into vector space. 
 
-- **Include folder**:
-    - it contains all the basic functions used in the simulation e.g **seabed_function.m**. 
-  
 - **Vrep_utils**:
     - it contains the matlab scripts needed to interface with robot and api, and to retrieve joint positions and info from the robot framework.
   
