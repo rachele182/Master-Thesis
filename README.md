@@ -35,6 +35,6 @@ An overview of the experiment setups is shown in the figure.
 To prove the effectiveness of **CDAC** we performed a cooperative lifting task of a box performed in three different ways.   
 Firstly, the task is performed using the motion controller without the cooperative admittance loop; then the lifting task is performed using the cooperative admittance controller with fixed gains; finally we test our CDAC with modulation of the relative stiffness.  
 The results in terms of applied internal stresses and slippage avoidance will be compared in the study.   
-Instructions and guide trought the files are in the readme.txt file inside the repository.
+Instructions and guide through the files are in the readme.txt file inside the repository.
 
 <img src="https://github.com/rachele182/Master-Thesis/assets/75611841/2bce3aba-cd9f-46b1-9d15-61a87dadfd79" width="405">
