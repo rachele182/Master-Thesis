@@ -1,10 +1,17 @@
+%    begin                : January 2022
+%    authors              : Rachele Nebbia Colomba
+%    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+%    email                : rachelenebbia <at> gmail <dot> com
+
+%%Description: script file to post-process rosbag data and create plots.
+
 %% EXTRACT DATA 
 clear all; close all; clc;
 
 %% INPUTS
 %% solution with variable stiffness
-filename = 'demo_box_variable_adm_800.bag';       % Rosbag to extract
-save_name = "variable_impedance_800_k.mat";        % Name of dest mat file
+filename = 'demo_box_variable_adm_800.bag';   % Rosbag to extract
+save_name = "variable_impedance_800_k.mat";   % Name of dest mat file
 
 %% Extract data from rosbag
 

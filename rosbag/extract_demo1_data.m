@@ -1,9 +1,16 @@
-%% EXTRACT DATA 
+%    begin                : January 2022
+%    authors              : Rachele Nebbia Colomba
+%    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+%    email                : rachelenebbia <at> gmail <dot> com
+
+%%Description: script file to post-process rosbag data and create plots.
+
+%% EXTRACT DATA Experiment 1)
 clear all; close all; clc;
 
 %% INPUTS
 %% trivial solution with thight grasp
-filename = 'demo_box_no_adm.bag';       % Rosbag to extract
+filename = 'demo_box_no_adm.bag';       % Rosbag to extrac (no variable admittance)
 save_name = "no_admittance.mat";        % Name of dest mat file
 
 %% Extract data from rosbag
@@ -88,7 +95,7 @@ gr = [0.3 0.6 0.3];
 or = [0.9 0.5 0.1]; 
 
 
-%% forces
+%% External forces
 tt = 0:0.001:15; 
 sizet = size(tt,2); 
 f = figure;
@@ -109,7 +116,7 @@ xlabel('$t/\mathrm{s}$', 'Interpreter', 'latex', 'FontSize', 12)
 % xlim([1.8,4])
 ylabel('$f_2/\mathrm{N}$', 'Interpreter', 'latex', 'FontSize', 12)
 
-%% arms position y-axis
+%% Arms position y-axis
 tt = 0:0.001:15; 
 sizet = size(tt,2); 
 f = figure;
@@ -149,7 +156,6 @@ xlabel('$t/\mathrm{s}$', 'Interpreter', 'latex', 'FontSize', 12)
 xlim([0 15])
 ylabel('$z/\mathrm{m}$', 'Interpreter', 'latex', 'FontSize', 12)
 legend('ref','curr','contact point','Interpreter', 'latex', 'FontSize', 10)
-
 
 %% Analysis
 f = figure;

@@ -1,4 +1,9 @@
-%% PLOTS
+%    begin                : January 2022
+%    authors              : Rachele Nebbia Colomba
+%    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+%    email                : rachelenebbia <at> gmail <dot> com
+
+%%Description: script file to post-process rosbag data and create plots.
 
 clear all; close all; clc;
 
@@ -36,7 +41,7 @@ end
 
 disp('Read Impedance.');
 
-% State
+% Robot State
 topic_data = select(bag,...
     'Topic', '/variable_impedance_controller/robot_state');
 msg_struct = topic_data.readMessages;
@@ -57,7 +62,7 @@ end
 
 disp('Read State.');
 
-% Forces
+% External Forces
 topic_data = select(bag,...
     'Topic', '/franka_state_controller/F_ext');
 msg_struct = topic_data.readMessages;
@@ -81,7 +86,7 @@ end
 
 disp('Read Forces.');
 
-% Errors
+% Position Errors
 topic_data = select(bag,...
     'Topic', '/variable_impedance_controller/pos_error');
 msg_struct = topic_data.readMessages;

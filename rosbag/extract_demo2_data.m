@@ -1,10 +1,17 @@
+%    begin                : January 2022
+%    authors              : Rachele Nebbia Colomba
+%    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
+%    email                : rachelenebbia <at> gmail <dot> com
+
+%%Description: script file to post-process rosbag data and create plots.
+
 %% EXTRACT DATA 
 clear all; close all; clc;
 
 %% INPUTS
 %% solution with fixed stiffness
 filename = 'demo_box_no_mod_k.bag';       % Rosbag to extract
-% filename = 'demo_fixed_impedance.bag';       % Rosbag to extract
+% filename = 'demo_fixed_impedance.bag';  % Rosbag to extract
 save_name = "fixed_impedance.mat";        % Name of dest mat file
 
 %% Extract data from rosbag
@@ -21,9 +28,9 @@ bSel = select(bag,'Topic','/motion_control_dq/info_debug');
 bSel_traj = select(bag,'Topic','/motion_control_dq/dq_trajectory'); 
 bSel_comp = select(bag,'Topic','/motion_control_dq/compliant_traj'); 
 
-msgStructs = readMessages(bSel,'DataFormat','struct'); %%read message from dual arm control node
-msgStructs_traj = readMessages(bSel_traj,'DataFormat','struct'); %%read message from dual arm  trajectory gen node
-msgStructs_comp = readMessages(bSel_comp,'DataFormat','struct'); %%read message from dual
+msgStructs = readMessages(bSel,'DataFormat','struct');           %read message from dual arm control node
+msgStructs_traj = readMessages(bSel_traj,'DataFormat','struct'); %read message from dual arm  trajectory gen node
+msgStructs_comp = readMessages(bSel_comp,'DataFormat','struct'); %read message from dual arm admittance loop
 
 len_msg = length(msgStructs); 
 len_msg_traj = length(msgStructs_traj); 
@@ -35,7 +42,7 @@ pos_nom = zeros(3,len_msg_traj); %nominal relative position
 t_bias = double(msgStructs_traj{1}.Header.Stamp.Sec)+...
 double(msgStructs_traj{1}.Header.Stamp.Nsec)*10^-9;
 
-%% relative position reference 
+%% Relative position reference 
 for i = 1 : length(msgStructs_traj)
     ros_t = msgStructs_traj{i}.Header.Stamp;
     stamp_traj(i) = double(ros_t.Sec)+double(ros_t.Nsec)*10^-9;
@@ -66,7 +73,6 @@ end
 
 disp('Read Compliant variables.');
 
-
 %% Variables from control node
 fl = zeros(3,len_msg); %left arm
 fr = zeros(3,len_msg); %right arm
@@ -91,7 +97,6 @@ disp('Read Forces.');
 max_t = max([stamp_traj(end), stamp_comp(end)]); 
 dt = max([mean(diff(stamp_traj)),mean(diff(stamp_comp))]); 
 time  =  0 : dt : max_t;
-
 
 pos_nom_pp  =  zeros(size(pos_nom,1),size(time,2));
 pos_comp_rel_pp  =  zeros(size(pos_comp_rel,1),size(time,2));
@@ -126,6 +131,7 @@ end
 
 %% Plotting demo with trivial solution
 % load("fixed_impedance.mat");
+
 %%Define color
 red = [0.8 0.2 0.2]; 
 gr = [0.3 0.6 0.3];

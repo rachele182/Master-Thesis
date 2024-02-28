@@ -3,7 +3,7 @@
 %    copyright            : (C) 2022 Technical University of Munich // Universitä di pisa    
 %    email                : rachelenebbia <at> gmail <dot> com
 
-%%Description: script file to post-process rosbag data. 
+%%Description: script file to post-process rosbag data and convert them to matlab workspace. 
 
 clear all; clc; 
 addpath(genpath('/home/ynistico/Desktop/experiment_tests/dependencies/')) 
