@@ -5,13 +5,13 @@
 Here after you can find a brief description of the contents of the C++ and ROS files used for the experiments with real Franka Emika Panda Robots. The controller was designed by using ros_noetic version and FRANKA_ROS to interface with the robots.  
 Please refer to the following description of directories:
 1. **panda controllers**:
-it contains all the files needed to run ros and interface with the two arms robot, specifically:  
+it contains all the files needed to run ros nodes and interface with the two arms robot, specifically:  
 _src_: contain .cpp files.
 _include_: header of cpp files with class definition and variables.
 _launch_: launch ros files for dual controller, admittance loop, and trajectory generator;
 _msg_: customed ros mgs for publisher and subscriber nodes. 
 3. **rosbag**: it contains the recorded data from different grasping tasks experiments and the script used to plot those data in matlab eg:  
-_extrac_data.m_  
+_extrac_data.m_; 
 4. **demoplots**: it contains all the visual results of the threee different experiments carried out in terms of .svg images and .mov videos.
 
 A brief guide trough the **main** files and the workflow is reported below:

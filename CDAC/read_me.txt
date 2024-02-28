@@ -3,7 +3,7 @@
 Here you can find the instruction to run the simulation and visualize the preliminary results in Matlab.
 There are two main steps: one with adaptation of only relative stiffness and one with adaptation of both relative and absolute stiffnes. 
 
-Step 1 ) Adapating relative stiffness:
+Step A) Adapating relative stiffness:
 
 Instructions to run the simulation of a grasping task: 
 
@@ -25,7 +25,7 @@ Instructions to run the simulation of a grasping task:
 
 To visualize the plots of the results of the three different simulation run performance_analysis.m
 
-Step 2) Adapting both relative and absolute stiffness: 
+Step B) Adapting both relative and absolute stiffness: 
 
 Increase absolute stiffness (within stab conditions) during lifting phase to have better tracking performance of the nominal trajectory;
 
