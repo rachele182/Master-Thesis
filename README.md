@@ -18,7 +18,7 @@
 
 ---
 ## Overview
-his repository contains the research and implementation of a **Cooperative Dual Admittance Controller (CDAC)** developed as part of a Master's thesis in **robotics and control engineering**.
+This repository contains the research and implementation of a **Cooperative Dual Admittance Controller (CDAC)** developed as part of a Master's thesis in **robotics and control engineering**.
 
 The controller is designed for **bimanual and cooperative manipulators**. It builds on **dual-quaternion algebra**, which the controller uses to represent both wrenches and elastic displacements in a way that is geometrically consistent with the cooperative task space. The complete scheme combines four blocks:
 
@@ -98,8 +98,6 @@ The three configurations are compared in terms of **applied internal stresses** 
 | Robotics        | Franka Emika Panda (7-DoF), Franka Control Interface (FCI)   |
 | Software        | C++, ROS, MATLAB/Simulink, CoppeliaSim, DQ Robotics          |
 | Hardware link   | libfranka, Ethernet/router network, real-time control        |
-
-## Publication & Citation
 
 ## Publication & Citation
 
