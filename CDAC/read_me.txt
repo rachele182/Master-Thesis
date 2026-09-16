@@ -1,6 +1,6 @@
 ## Adaptive Cooperative Admittance Controller
 
-Here you can find the instruction to run the simulation and visualize the preliminary results in Matlab.
+Here you can find the instructions to run the simulation and visualize the preliminary results in Matlab.
 There are two main steps: one with adaptation of only relative stiffness and one with adaptation of both relative and absolute stiffnes. 
 
 Step A) Adapating relative stiffness:
